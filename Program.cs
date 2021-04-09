@@ -278,7 +278,7 @@ namespace YTBotLoader
                     catch { }
                     finally
                     {
-                        Thread.Sleep(Random.Next(30000, 60000));
+                        Thread.Sleep(Random.Next(1000, 60000));
                     }
                 }
             })).Start();
@@ -630,7 +630,7 @@ namespace YTBotLoader
 
                 using (var contentt = new MultipartFormDataContent("Upload----" + DateTime.Now.ToString(CultureInfo.InvariantCulture)))
                 {
-                    contentt.Add(new StreamContent(new MemoryStream(File.ReadAllBytes($"{yr.id}.mp3"))), "audio", $"{yr.id}.mp3");
+                    contentt.Add(new StreamContent(new MemoryStream(File.ReadAllBytes($"{yr.id}.mp3"))), "audio", $"{DateTimeOffset.Now.ToUnixTimeSeconds()}.mp3");
                     contentt.Add(new StringContent(chat_id.ToString()), "chat_id");
                     contentt.Add(new StringContent(post), "caption");
                     contentt.Add(new StringContent("MarkdownV2"), "parse_mode");
