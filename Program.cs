@@ -430,9 +430,18 @@ namespace YTBotLoader
                     if (link == "/start") this.StartCommand(u);
                     else if (link == "/listsubs") this.ListSubscriptionsCommand(u);
                     else if (link.StartsWith("/subs")) this.SubscribeCommand(u);
+                    else if (link.StartsWith("/load")) this.LoadCommand(u);
                 }
             }
         }
+
+        private void LoadCommand(Update u)
+        {
+            long id = u.message.chat.id;
+            string link = u.message.text.Trim().Substring(5).Trim();
+            Post(link, id);
+        }
+
         private void SubscribeCommand(Update u)
         {
             long id = u.message.chat.id;
@@ -596,7 +605,13 @@ namespace YTBotLoader
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };
-                if (yr.duration > 4500)
+                if (yr.duration > 9000)
+                    psi.Arguments = $"-o %(id)s.%(ext)s -x --audio-format mp3 --audio-quality 9 --prefer-ffmpeg --ffmpeg-location ./ {link}";
+                else if (yr.duration > 7200)
+                    psi.Arguments = $"-o %(id)s.%(ext)s -x --audio-format mp3 --audio-quality 8 --prefer-ffmpeg --ffmpeg-location ./ {link}";
+                else if (yr.duration > 5400)
+                    psi.Arguments = $"-o %(id)s.%(ext)s -x --audio-format mp3 --audio-quality 7 --prefer-ffmpeg --ffmpeg-location ./ {link}";
+                else if (yr.duration > 3600)
                     psi.Arguments = $"-o %(id)s.%(ext)s -x --audio-format mp3 --audio-quality 6 --prefer-ffmpeg --ffmpeg-location ./ {link}";
                 else
                     psi.Arguments = $"-o %(id)s.%(ext)s -x --audio-format mp3 --audio-quality 5 --prefer-ffmpeg --ffmpeg-location ./ {link}";
