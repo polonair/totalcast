@@ -624,13 +624,15 @@ namespace YTBotLoader
                     CreateNoWindow = true
                 }).WaitForExit();
 
+                string sr = "";
                 int bitrate = 8 * 45 * 1024 * 1024 / (int)yr.duration / 1000;
                 if (bitrate > 256) bitrate = 256;
+                if (bitrate < 32) sr = "-ar 22050";
 
                 Process.Start(new ProcessStartInfo()
                 {
                     FileName = "ffmpeg.exe",
-                    Arguments = $"-i {yr.id}.mp3 -codec:a libmp3lame -b:a {bitrate}k -ac 1 -abr:a 1 done-{yr.id}.mp3",
+                    Arguments = $"-i {yr.id}.mp3 -codec:a libmp3lame -b:a {bitrate}k {sr} -ac 1 -abr:a 1 done-{yr.id}.mp3",
                     UseShellExecute = false,
                     CreateNoWindow = true
                 }).WaitForExit();
