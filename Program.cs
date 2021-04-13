@@ -598,7 +598,7 @@ namespace YTBotLoader
                 object r = Newtonsoft.Json.JsonConvert.DeserializeObject(result);
                 YoutubeRequest yr = Newtonsoft.Json.JsonConvert.DeserializeObject<YoutubeRequest>(result);
                 if (yr == null) return;
-                ProcessStartInfo psi = new ProcessStartInfo()
+                /*ProcessStartInfo psi = new ProcessStartInfo()
                 {
                     FileName = "youtube-dl.exe",
                     Arguments = $"{link} -j",
@@ -613,11 +613,29 @@ namespace YTBotLoader
                     psi.Arguments = $"-o %(id)s.%(ext)s -x --audio-format mp3 --audio-quality 7 --prefer-ffmpeg --ffmpeg-location ./ {link}";
                 else if (yr.duration > 3600)
                     psi.Arguments = $"-o %(id)s.%(ext)s -x --audio-format mp3 --audio-quality 6 --prefer-ffmpeg --ffmpeg-location ./ {link}";
-                else
-                    psi.Arguments = $"-o %(id)s.%(ext)s -x --audio-format mp3 --audio-quality 5 --prefer-ffmpeg --ffmpeg-location ./ {link}";
+                else*/
+                    //psi.Arguments = $"-o %(id)s.%(ext)s -x --audio-format mp3 --audio-quality 9 --prefer-ffmpeg --ffmpeg-location ./ {link}";
+                // ffmpeg.exe -i Wr07Jf5Glds.m4a -codec:a libmp3lame -b:a 86k -ac 1 -abr:a 1 out.mp3
+                Process.Start(new ProcessStartInfo()
+                {
+                    FileName = "youtube-dl.exe",
+                    Arguments = $"-o %(id)s.%(ext)s -x --audio-format mp3 --audio-quality 0 --prefer-ffmpeg --ffmpeg-location ./ {link}",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }).WaitForExit();
 
-                Process.Start(psi).WaitForExit();
-                using (var mp3 = new Id3.Mp3($"{yr.id}.mp3", Id3.Mp3Permissions.ReadWrite))
+                int bitrate = 8 * 45 * 1024 * 1024 / (int)yr.duration / 1000;
+                if (bitrate > 256) bitrate = 256;
+
+                Process.Start(new ProcessStartInfo()
+                {
+                    FileName = "ffmpeg.exe",
+                    Arguments = $"-i {yr.id}.mp3 -codec:a libmp3lame -b:a {bitrate}k -ac 1 -abr:a 1 done-{yr.id}.mp3",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }).WaitForExit();
+                
+                using (var mp3 = new Id3.Mp3($"done-{yr.id}.mp3", Id3.Mp3Permissions.ReadWrite))
                 {
                     Id3.Id3Tag tag = mp3.GetTag(Id3.Id3TagFamily.Version2X);
                     if (tag == null) tag = new Id3.Id3Tag();
@@ -645,7 +663,7 @@ namespace YTBotLoader
 
                 using (var contentt = new MultipartFormDataContent("Upload----" + DateTime.Now.ToString(CultureInfo.InvariantCulture)))
                 {
-                    contentt.Add(new StreamContent(new MemoryStream(File.ReadAllBytes($"{yr.id}.mp3"))), "audio", $"{DateTimeOffset.Now.ToUnixTimeSeconds()}.mp3");
+                    contentt.Add(new StreamContent(new MemoryStream(File.ReadAllBytes($"done-{yr.id}.mp3"))), "audio", $"{DateTimeOffset.Now.ToUnixTimeSeconds()}.mp3");
                     contentt.Add(new StringContent(chat_id.ToString()), "chat_id");
                     contentt.Add(new StringContent(post), "caption");
                     contentt.Add(new StringContent("MarkdownV2"), "parse_mode");
@@ -675,6 +693,7 @@ namespace YTBotLoader
                 }
 
                 File.Delete($"{yr.id}.mp3");
+                File.Delete($"done-{yr.id}.mp3");
 
                 return;
             }
