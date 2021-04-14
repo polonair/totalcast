@@ -22,7 +22,7 @@ namespace YTBotLoader
         public bool ok { get; set; }
         public Update[] result { get; set; }
     }
-    class Message
+    public class Message
     {
         public int message_id { get; set; }
         public User from { get; set; }
@@ -80,7 +80,15 @@ namespace YTBotLoader
         public VoiceChat voice_chat_participants_invited { get; set; }
         public InlineKeyboardMarkup reply_markup { get; set; }
     }
-    public class InlineKeyboardMarkup { }
+    public class InlineKeyboardButton
+    {
+        public string text;
+        public string callback_data;
+    }
+    public class InlineKeyboardMarkup 
+    {
+        public InlineKeyboardButton[][] inline_keyboard;
+    }
     public class VoiceChat { }
     public class ProximityAlertTriggered { }
     public class PassportData { }
@@ -101,15 +109,24 @@ namespace YTBotLoader
     public class Animation { }
     class InlineQuery { }
     class ChosenInlineResult { }
-    class CallbackQuery { }
-    class ShippingQuery { }
-    class PreCheckoutQuery { }
-    class Poll { }
-    class PollAnswer { }
-    class ChatPhoto { }
-    class ChatPermissions { }
-    class ChatLocation { }
-    class Chat
+    public class CallbackQuery
+    {
+        public string id;
+        public User from;
+        public Message message;
+        public string inline_message_id;
+        public string chat_instance;
+        public string data;
+        public string game_short_name;
+    }
+    public class ShippingQuery { }
+    public class PreCheckoutQuery { }
+    public class Poll { }
+    public class PollAnswer { }
+    public class ChatPhoto { }
+    public class ChatPermissions { }
+    public class ChatLocation { }
+    public class Chat
     {
         public long id { get; set; }
         public string type { get; set; }
@@ -130,7 +147,7 @@ namespace YTBotLoader
         public int linked_chat_id { get; set; }
         public ChatLocation location { get; set; }
     }
-    class User
+    public class User
     {
         public int id { get; set; }
         public bool is_bot { get; set; }
@@ -227,6 +244,7 @@ namespace YTBotLoader
     {
         public long chat_id;
         public string text;
+        public InlineKeyboardMarkup reply_markup;
     }
     class BotService2 : ApplicationContext
     {
@@ -433,8 +451,57 @@ namespace YTBotLoader
                     else if (link.StartsWith("/load")) this.LoadCommand(u);
                 }
             }
+            else if (u.callback_query !=null)
+            {
+                if (!string.IsNullOrEmpty(u.callback_query.data))
+                {
+                    string data = u.callback_query.data.Trim();
+                    if (data.StartsWith("#select")) this.SelectQuery(u);
+                }
+            }
         }
-
+        private void SelectQuery(Update u)
+        {
+            long id = u.callback_query.message.chat.id;
+            string ch_id = u.callback_query.data.Trim().Substring(7).Trim();
+            ch_id = ch_id.Substring(1, ch_id.Length - 2);
+            if (File.Exists($"{id}.settings"))
+            {
+                Settings s = Newtonsoft.Json.JsonConvert.DeserializeObject<Settings>(File.ReadAllText($"{id}.settings"));
+                foreach(Settings._subscription sub in s.subscriptions)
+                {
+                    if (sub.id == ch_id)
+                    {
+                        SendMessageArgs sm = new SendMessageArgs()
+                        {
+                            chat_id = id,
+                            text = $"Channel \"{sub.title}\"",
+                            reply_markup = new InlineKeyboardMarkup()
+                            {
+                                inline_keyboard = new InlineKeyboardButton[][]
+                                {
+                                    new InlineKeyboardButton[]
+                                    {
+                                        new InlineKeyboardButton()
+                                        {
+                                            text = $"Info",
+                                            callback_data=$"#info [{sub.id}]",
+                                        },
+                                        new InlineKeyboardButton()
+                                        {
+                                            text = $"Unsubscribe",
+                                            callback_data=$"#unsub [{sub.id}]",
+                                        },
+                                    }
+                                }
+                            },
+                        };
+                        SendMessage(sm, id);
+                        return;
+                    }
+                }
+            }
+        }
         private void LoadCommand(Update u)
         {
             long id = u.message.chat.id;
@@ -545,12 +612,28 @@ namespace YTBotLoader
                 string answer = "";
                 if (s.subscriptions != null && s.subscriptions.Length > 0)
                 {
-                    answer += "You are subscribed on:\n";
+                    List<InlineKeyboardButton[]> menu = new List<InlineKeyboardButton[]>();
                     foreach (Settings._subscription sub in s.subscriptions)
                     {
-                        answer += $"* {sub.title}\n";
+                        menu.Add(new InlineKeyboardButton[]
+                        {
+                            new InlineKeyboardButton()
+                            {
+                                text = $"\"{sub.title}\"",
+                                callback_data=$"#select [{sub.id}]",
+                            }
+                        });
                     }
-                    SendMessage(answer, id);
+                    SendMessageArgs sm = new SendMessageArgs()
+                    {
+                        chat_id = id,
+                        text = "You are subscribed on:",
+                        reply_markup = new InlineKeyboardMarkup() 
+                        {
+                             inline_keyboard =  menu.ToArray() 
+                        },
+                    };
+                    SendMessage(sm, id);
                 }
                 else
                 {
@@ -560,11 +643,21 @@ namespace YTBotLoader
         }
         private void SendMessage(string v, long id)
         {
-            SendMessageArgs s = new SendMessageArgs() 
+            SendMessageArgs s = new SendMessageArgs()
             {
                 chat_id = id,
                 text = v
             };
+            string data = Newtonsoft.Json.JsonConvert.SerializeObject(s);
+            HttpContent content = new StringContent(data, Encoding.UTF8);
+            content.Headers.ContentType.MediaType = "application/json";
+            using (var message = Client.PostAsync($"https://api.telegram.org/bot{BOTAPIKEY}/sendMessage", content).Result)
+            {
+                var input = message.Content.ReadAsStringAsync().Result;
+            }
+        }
+        private void SendMessage(SendMessageArgs s, long id)
+        {
             string data = Newtonsoft.Json.JsonConvert.SerializeObject(s);
             HttpContent content = new StringContent(data, Encoding.UTF8);
             content.Headers.ContentType.MediaType = "application/json";
