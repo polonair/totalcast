@@ -244,6 +244,11 @@ namespace YTBotLoader
     {
         public long chat_id;
         public string text;
+    }
+    class SendMessageArgsReplyMarkup
+    {
+        public long chat_id;
+        public string text;
         public InlineKeyboardMarkup reply_markup;
     }
     class BotService2 : ApplicationContext
@@ -446,18 +451,122 @@ namespace YTBotLoader
                 {
                     string link = u.message.text.Trim();
                     if (link == "/start") this.StartCommand(u);
+                    else if (link.StartsWith("https://")) this.LinkAction(u);
                     else if (link == "/listsubs") this.ListSubscriptionsCommand(u);
                     else if (link.StartsWith("/subs")) this.SubscribeCommand(u);
                     else if (link.StartsWith("/load")) this.LoadCommand(u);
                 }
             }
-            else if (u.callback_query !=null)
+            else if (u.callback_query != null)
             {
                 if (!string.IsNullOrEmpty(u.callback_query.data))
                 {
                     string data = u.callback_query.data.Trim();
                     if (data.StartsWith("#select")) this.SelectQuery(u);
+                    else if (data.StartsWith("#load")) this.LoadQuery(u);
+                    else if (data.StartsWith("#subscribe")) this.SubQuery(u);
+                    else if (data.StartsWith("#info")) this.InfoQuery(u);
+                    else if (data.StartsWith("#unsub")) this.USubQuery(u);
                 }
+            }
+        }
+
+        private void USubQuery(Update u) { }
+        private void InfoQuery(Update u) { }
+        private void SubQuery(Update u) { }
+        private void LoadQuery(Update u) 
+        { 
+            long id = u.callback_query.message.chat.id;
+            string link = u.callback_query.data.Trim().Substring(5).Trim();
+            link = link.Substring(1, link.Length - 2);
+            SendMessage("Loading video, please wait...", id);
+            Post(link, id);
+        }
+
+        private void LinkAction(Update u)
+        {
+            long id = u.message.chat.id;
+            string link = u.message.text.Trim();
+            string page = Client.GetAsync(link).Result.Content.ReadAsStringAsync().Result;
+            int vidIdx = page.IndexOf("<meta itemprop=\"videoId\" content=");
+            int chIdx = page.IndexOf("<meta itemprop=\"channelId\" content=");
+
+            Settings s = Newtonsoft.Json.JsonConvert.DeserializeObject<Settings>(File.ReadAllText($"{id}.settings"));
+
+            if (vidIdx > 0)
+            {
+                string s1 = page.Substring(chIdx + 36);
+                string chid = s1.Substring(0, s1.IndexOf("\">"));
+                s1 = page.Substring(vidIdx + 34);
+                string vid = s1.Substring(0, s1.IndexOf("\">"));
+
+                SendMessageArgsReplyMarkup sm = new SendMessageArgsReplyMarkup()
+                {
+                    chat_id = id,
+                    text = $"Link to video found",
+                    reply_markup = new InlineKeyboardMarkup()
+                    {
+                        inline_keyboard = new InlineKeyboardButton[][]
+                        {
+                            new InlineKeyboardButton[]
+                            {
+                                new InlineKeyboardButton()
+                                {
+                                    text = $"Download",
+                                    callback_data=$"#load [{link}]",
+                                },
+                            }
+                        }
+                    },
+                };
+                SendMessage(sm, id);
+            }
+            else if (chIdx > 0) 
+            {
+                string s1 = page.Substring(chIdx + 36);
+                string chid = s1.Substring(0, s1.IndexOf("\">"));
+                string chName = GetChannelTitle(chid);
+
+                bool subscribed = false;
+                foreach(Settings._subscription sub in s.subscriptions)
+                {
+                    if (sub.id == chid)
+                    {
+                        subscribed = true;
+                        break;
+                    }
+                }
+
+                SendMessageArgsReplyMarkup sm = new SendMessageArgsReplyMarkup()
+                {
+                    chat_id = id,
+                    text = $"Link to channel \"{chName}\" found, you're {(subscribed?"subscribed":"not subscribed")}, so...",
+                    reply_markup = new InlineKeyboardMarkup()
+                    {
+                        inline_keyboard = new InlineKeyboardButton[][]
+                        {
+                            new InlineKeyboardButton[]
+                            {
+                                subscribed
+                                ?new InlineKeyboardButton()
+                                {
+                                    text = $"Unsubscribe",
+                                    callback_data=$"#unsub [{chid}]",
+                                }
+                                :new InlineKeyboardButton()
+                                {
+                                    text = $"Subscribe",
+                                    callback_data=$"#subscribe [{chid}]",
+                                },
+                            }
+                        }
+                    },
+                };
+                SendMessage(sm, id);
+            }
+            else 
+            { 
+                SendMessage("Can not figure out this link", id);
             }
         }
         private void SelectQuery(Update u)
@@ -472,7 +581,7 @@ namespace YTBotLoader
                 {
                     if (sub.id == ch_id)
                     {
-                        SendMessageArgs sm = new SendMessageArgs()
+                        SendMessageArgsReplyMarkup sm = new SendMessageArgsReplyMarkup()
                         {
                             chat_id = id,
                             text = $"Channel \"{sub.title}\"",
@@ -624,7 +733,7 @@ namespace YTBotLoader
                             }
                         });
                     }
-                    SendMessageArgs sm = new SendMessageArgs()
+                    SendMessageArgsReplyMarkup sm = new SendMessageArgsReplyMarkup()
                     {
                         chat_id = id,
                         text = "You are subscribed on:",
@@ -656,7 +765,7 @@ namespace YTBotLoader
                 var input = message.Content.ReadAsStringAsync().Result;
             }
         }
-        private void SendMessage(SendMessageArgs s, long id)
+        private void SendMessage(SendMessageArgsReplyMarkup s, long id)
         {
             string data = Newtonsoft.Json.JsonConvert.SerializeObject(s);
             HttpContent content = new StringContent(data, Encoding.UTF8);
