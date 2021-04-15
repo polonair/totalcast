@@ -453,8 +453,8 @@ namespace YTBotLoader
                     if (link == "/start") this.StartCommand(u);
                     else if (link.StartsWith("https://")) this.LinkAction(u);
                     else if (link == "/listsubs") this.ListSubscriptionsCommand(u);
-                    else if (link.StartsWith("/subs")) this.SubscribeCommand(u);
-                    else if (link.StartsWith("/load")) this.LoadCommand(u);
+                    //else if (link.StartsWith("/subs")) this.SubscribeCommand(u);
+                    //else if (link.StartsWith("/load")) this.LoadCommand(u);
                 }
             }
             else if (u.callback_query != null)
@@ -471,14 +471,64 @@ namespace YTBotLoader
             }
         }
 
-        private void USubQuery(Update u) { }
+        private void USubQuery(Update u)
+        {
+            long id = u.callback_query.message.chat.id;
+            string link = u.callback_query.data.Trim().Substring(6).Trim();
+            link = link.Substring(1, link.Length - 2);
+            if (File.Exists($"{id}.settings"))
+            {
+                Settings s = Newtonsoft.Json.JsonConvert.DeserializeObject<Settings>(File.ReadAllText($"{id}.settings"));
+                List<Settings._subscription> newsubs = new List<Settings._subscription>();
+                bool isUnsub = false;
+                string title = null;
+                foreach(Settings._subscription sub in s.subscriptions)
+                {
+                    if (sub.id != link) newsubs.Add(sub);
+                    else { title = sub.title; isUnsub = true; }
+                }
+                if (isUnsub)
+                {
+                    s.subscriptions = newsubs.ToArray();
+                    string content = Newtonsoft.Json.JsonConvert.SerializeObject(s);
+                    File.WriteAllText($"{id}.settings", content);
+                    SendMessage($"You're now unsubscribed from channel '{title}'", id);
+                }
+                else
+                {
+                    SendMessage($"You've never been subscribed to '{link}'", id);
+                }
+            }
+        }
         private void InfoQuery(Update u) { }
-        private void SubQuery(Update u) { }
+        private void SubQuery(Update u) 
+        {
+
+            long id = u.callback_query.message.chat.id;
+            string ch_id = u.callback_query.data.Trim().Substring(10).Trim();
+            ch_id = ch_id.Substring(1, ch_id.Length - 2);
+
+            if (File.Exists($"{id}.settings"))
+            {
+                Settings s = Newtonsoft.Json.JsonConvert.DeserializeObject<Settings>(File.ReadAllText($"{id}.settings"));
+                Settings._subscription sub = CreateSubscription(ch_id);
+                if (s.subscriptions == null) s.subscriptions = new Settings._subscription[] { sub };
+                else
+                {
+                    Array.Resize(ref s.subscriptions, s.subscriptions.Length + 1);
+                    s.subscriptions[s.subscriptions.Length - 1] = sub;
+                }
+                string content = Newtonsoft.Json.JsonConvert.SerializeObject(s);
+                File.WriteAllText($"{id}.settings", content);
+                SendMessage($"You are now subscribed on '{sub.title}'", id);
+            }
+        }
         private void LoadQuery(Update u) 
         { 
             long id = u.callback_query.message.chat.id;
             string link = u.callback_query.data.Trim().Substring(5).Trim();
             link = link.Substring(1, link.Length - 2);
+
             SendMessage("Loading video, please wait...", id);
             Post(link, id);
         }
@@ -577,7 +627,7 @@ namespace YTBotLoader
             if (File.Exists($"{id}.settings"))
             {
                 Settings s = Newtonsoft.Json.JsonConvert.DeserializeObject<Settings>(File.ReadAllText($"{id}.settings"));
-                foreach(Settings._subscription sub in s.subscriptions)
+                foreach (Settings._subscription sub in s.subscriptions)
                 {
                     if (sub.id == ch_id)
                     {
