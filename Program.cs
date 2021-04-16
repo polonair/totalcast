@@ -109,6 +109,13 @@ namespace YTBotLoader
     public class Animation { }
     class InlineQuery { }
     class ChosenInlineResult { }
+    public class EditMessageText
+    {
+        public long chat_id;
+        public int message_id;
+        public string text;
+        public InlineKeyboardMarkup reply_markup;
+    }
     public class CallbackQuery
     {
         public string id;
@@ -467,8 +474,15 @@ namespace YTBotLoader
                     else if (data.StartsWith("#subscribe")) this.SubQuery(u);
                     else if (data.StartsWith("#info")) this.InfoQuery(u);
                     else if (data.StartsWith("#unsub")) this.USubQuery(u);
+                    else if (data.StartsWith("#cancel")) this.CancelQuery(u);
                 }
             }
+        }
+
+        private void CancelQuery(Update u)
+        {
+            long id = u.callback_query.message.chat.id;
+            DeleteMessage(u.callback_query.message.chat.id, u.callback_query.message.message_id);
         }
 
         private void USubQuery(Update u)
@@ -528,9 +542,39 @@ namespace YTBotLoader
             long id = u.callback_query.message.chat.id;
             string link = u.callback_query.data.Trim().Substring(5).Trim();
             link = link.Substring(1, link.Length - 2);
-
-            SendMessage("Loading video, please wait...", id);
+            EditMessageText e = new EditMessageText()
+            {
+                chat_id = u.callback_query.message.chat.id,
+                message_id = u.callback_query.message.message_id,
+                text = "Loading video, please wait...",
+                reply_markup = new InlineKeyboardMarkup()
+                {
+                    inline_keyboard = new InlineKeyboardButton[0][],
+                },
+            };
+            EditMessage(e);
+            //SendMessage("Loading video, please wait...", id);
             Post(link, id);
+            DeleteMessage(e.chat_id, e.message_id);
+        }
+
+        private void DeleteMessage(long chat_id, int message_id)
+        {
+            using (var message = Client.GetAsync($"https://api.telegram.org/bot{BOTAPIKEY}/deleteMessage?chat_id={chat_id}&message_id={message_id}").Result)
+            {
+                var input = message.Content.ReadAsStringAsync().Result;
+            }
+        }
+
+        private void EditMessage(EditMessageText e)
+        {
+            string data = Newtonsoft.Json.JsonConvert.SerializeObject(e);
+            HttpContent content = new StringContent(data, Encoding.UTF8);
+            content.Headers.ContentType.MediaType = "application/json";
+            using (var message = Client.PostAsync($"https://api.telegram.org/bot{BOTAPIKEY}/editMessageText", content).Result)
+            {
+                var input = message.Content.ReadAsStringAsync().Result;
+            }
         }
 
         private void LinkAction(Update u)
@@ -564,6 +608,11 @@ namespace YTBotLoader
                                 {
                                     text = $"Download",
                                     callback_data=$"#load [{link}]",
+                                },
+                                new InlineKeyboardButton()
+                                {
+                                    text = $"Cancel",
+                                    callback_data=$"#cancel",
                                 },
                             }
                         }
