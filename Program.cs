@@ -955,6 +955,7 @@ namespace YTBotLoader
         string prep(string str)
         {
             return str
+                .Replace("+", "\\+")
                 .Replace("|", "\\|")
                 .Replace("#", "\\#")
                 .Replace("=", "\\=")
