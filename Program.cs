@@ -506,11 +506,25 @@ namespace YTBotLoader
                     s.subscriptions = newsubs.ToArray();
                     string content = Newtonsoft.Json.JsonConvert.SerializeObject(s);
                     File.WriteAllText($"{id}.settings", content);
-                    SendMessage($"You're now unsubscribed from channel '{title}'", id);
+                    EditMessage(new EditMessageText()
+                    {
+                        chat_id = u.callback_query.message.chat.id,
+                        message_id = u.callback_query.message.message_id,
+                        text = $"You're now unsubscribed from channel '{title}'",
+                        reply_markup = new InlineKeyboardMarkup() { inline_keyboard = new InlineKeyboardButton[0][] },
+                    });
+                    //SendMessage($"You're now unsubscribed from channel '{title}'", id);
                 }
                 else
                 {
-                    SendMessage($"You've never been subscribed to '{link}'", id);
+                    EditMessage(new EditMessageText()
+                    {
+                        chat_id = u.callback_query.message.chat.id,
+                        message_id = u.callback_query.message.message_id,
+                        text = $"You've never been subscribed to '{link}'",
+                        reply_markup = new InlineKeyboardMarkup() { inline_keyboard = new InlineKeyboardButton[0][] },
+                    });
+                    //SendMessage($"You've never been subscribed to '{link}'", id);
                 }
             }
         }
@@ -534,7 +548,14 @@ namespace YTBotLoader
                 }
                 string content = Newtonsoft.Json.JsonConvert.SerializeObject(s);
                 File.WriteAllText($"{id}.settings", content);
-                SendMessage($"You are now subscribed on '{sub.title}'", id);
+                EditMessage(new EditMessageText() 
+                {
+                     chat_id = u.callback_query.message.chat.id,
+                     message_id = u.callback_query.message.message_id,
+                     text = $"You are now subscribed on '{sub.title}'",
+                     reply_markup = new InlineKeyboardMarkup() { inline_keyboard = new InlineKeyboardButton[0][] },
+                });
+                //SendMessage($"You are now subscribed on '{sub.title}'", id);
             }
         }
         private void LoadQuery(Update u) 
@@ -657,6 +678,11 @@ namespace YTBotLoader
                                     text = $"Subscribe",
                                     callback_data=$"#subscribe [{chid}]",
                                 },
+                                new InlineKeyboardButton()
+                                {
+                                    text = $"Cancel",
+                                    callback_data=$"#cancel",
+                                },
                             }
                         }
                     },
@@ -680,6 +706,36 @@ namespace YTBotLoader
                 {
                     if (sub.id == ch_id)
                     {
+                        EditMessageText em = new EditMessageText()
+                        {
+                            chat_id = id,
+                            text = $"Channel \"{sub.title}\"",
+                            message_id = u.callback_query.message.message_id,
+                            reply_markup = new InlineKeyboardMarkup()
+                            {
+                                inline_keyboard = new InlineKeyboardButton[][]
+                                {
+                                    new InlineKeyboardButton[]
+                                    {
+                                        new InlineKeyboardButton()
+                                        {
+                                            text = $"Info",
+                                            callback_data=$"#info [{sub.id}]",
+                                        },
+                                        new InlineKeyboardButton()
+                                        {
+                                            text = $"Unsubscribe",
+                                            callback_data=$"#unsub [{sub.id}]",
+                                        },
+                                        new InlineKeyboardButton()
+                                        {
+                                            text = $"Cancel",
+                                            callback_data=$"#cancel",
+                                        },
+                                    }
+                                }
+                            },
+                        };
                         SendMessageArgsReplyMarkup sm = new SendMessageArgsReplyMarkup()
                         {
                             chat_id = id,
@@ -704,7 +760,8 @@ namespace YTBotLoader
                                 }
                             },
                         };
-                        SendMessage(sm, id);
+                        //SendMessage(sm, id);
+                        EditMessage(em);
                         return;
                     }
                 }
@@ -832,6 +889,14 @@ namespace YTBotLoader
                             }
                         });
                     }
+                    menu.Add(new InlineKeyboardButton[]
+                    {
+                        new InlineKeyboardButton()
+                        {
+                            text = $"Cancel",
+                            callback_data=$"#cancel",
+                        }
+                    });
                     SendMessageArgsReplyMarkup sm = new SendMessageArgsReplyMarkup()
                     {
                         chat_id = id,
