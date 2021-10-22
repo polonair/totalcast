@@ -262,7 +262,7 @@ namespace YTBotLoader
     {
         static Random Random = new Random();
 
-        const string BOTAPIKEY = "1731323355:AAHGs-V_6VezDYRlj-uFN2f6ji3sAbV4y2o";
+        const string BOTAPIKEY = "1641144444:AAEyvZI7fYrd3vC_adS-kXe-W2j6jej5F-E";
 
         private HttpClient Client;
 
@@ -331,7 +331,7 @@ namespace YTBotLoader
                     Settings._subscription sub = s.subscriptions[idx];
                     long ta = sub.take_after;
                     sub.take_after = DateTimeOffset.Now.ToUnixTimeSeconds();
-                    Log($"Check for {sub.title}");
+                    Log($"[{DateTime.Now}]: Check for {sub.title}");
                     LoadNew(sub.id, ta, s.chat_id, sub);
                 }
                 string content = Newtonsoft.Json.JsonConvert.SerializeObject(s);
