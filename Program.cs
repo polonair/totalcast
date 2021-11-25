@@ -1,4 +1,9 @@
-﻿using Id3.Frames;
+﻿using Google.Apis.Auth.OAuth2;
+using Google.Apis.Drive.v3;
+using Google.Apis.Services;
+using Google.Apis.Upload;
+using Google.Apis.Util.Store;
+using Id3.Frames;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -261,6 +266,7 @@ namespace YTBotLoader
     class BotService2 : ApplicationContext
     {
         static Random Random = new Random();
+        DriveService dservice;
 
         const string BOTAPIKEY = "1641144444:AAEyvZI7fYrd3vC_adS-kXe-W2j6jej5F-E";
 
@@ -272,6 +278,14 @@ namespace YTBotLoader
         }
         internal void Start()
         {
+            /*var cred = GoogleWebAuthorizationBroker.AuthorizeAsync(new ClientSecrets {
+                ClientId = "131303684751-n3dpbk2lu2mna4ra69kp45l2btphm96c.apps.googleusercontent.com", ClientSecret = "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"
+            }, new[] { DriveService.ScopeConstants.Drive}, "user", CancellationToken.None, new FileDataStore("Drive.Auth.Store")).Result;
+
+            dservice = new DriveService(new BaseClientService.Initializer()
+            {
+                HttpClientInitializer = cred
+            });*/
             new Thread(new ThreadStart(() =>
             {
                 int nextup = 0;
@@ -397,11 +411,12 @@ namespace YTBotLoader
                         {
                             string result = p.StandardOutput.ReadToEnd();
                             YoutubeRequest yr = Newtonsoft.Json.JsonConvert.DeserializeObject<YoutubeRequest>(result);
-                            if (yr.is_live == null)
+                            if (yr != null && yr.is_live == null)
                             {
                                 Array.Resize(ref sub.watched, sub.watched.Length + 1);
                                 sub.watched[sub.watched.Length - 1] = vid;
                                 Post(link, chat);
+                                return;
                             }
                         }
                     }
@@ -434,9 +449,10 @@ namespace YTBotLoader
 
         private Update[] GetUpdate(int up = 0)
         {
+            string allowed = "&allowed_updates=%5B%22message%22%2C%22edited_message%22%2C%22channel_post%22%2C%22edited_channel_post%22%2C%22inline_query%22%2C%22chosen_inline_result%22%2C%22callback_query%22%2C%22shipping_query%22%2C%22pre_checkout_query%22%2C%22poll%22%2C%22poll_answer%22%2C%22my_chat_member%22%2C%22chat_member%22%2C%22chat_join_request%22%5D";
             var url = (up == 0)
-                ? $"https://api.telegram.org/bot{BOTAPIKEY}/getUpdates?timeout=600"
-                : $"https://api.telegram.org/bot{BOTAPIKEY}/getUpdates?timeout=600&offset={up}";
+                ? $"https://api.telegram.org/bot{BOTAPIKEY}/getUpdates?timeout=600{allowed}"
+                : $"https://api.telegram.org/bot{BOTAPIKEY}/getUpdates?timeout=600&offset={up}{allowed}";
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             using (HttpClient ServClient = new HttpClient())
             {
@@ -1059,6 +1075,32 @@ namespace YTBotLoader
                         var input = message.Content.ReadAsStringAsync().Result;
                     }
                 }
+                /* //1GkoqyUI_hIRq1wvtAlMQ-tksSEtCtEjt
+                 var fileMetadata = new Google.Apis.Drive.v3.Data.File()
+                 {
+                     Name = $"{yr.id}.mp3",
+                     Parents = new List<string>() { "1GkoqyUI_hIRq1wvtAlMQ-tksSEtCtEjt" }
+                 };
+
+                 string uploadedFileId;
+                 // Create a new file on Google Drive
+                 using (var fsSource = new FileStream($"done-{yr.id}.mp3", FileMode.Open, FileAccess.Read))
+                 {
+                     // Create a new file, with metadata and stream.
+                     var request = dservice.Files.Create(fileMetadata, fsSource, "audio/mpeg");
+                     request.Fields = "*";
+                     var results = request.UploadAsync(CancellationToken.None).Result;
+
+                     if (results.Status == UploadStatus.Failed)
+                     {
+                         Console.WriteLine($"Error uploading file: {results.Exception.Message}");
+                     }
+
+                     // the file id of the new file we created
+                     uploadedFileId = request.ResponseBody?.Id;
+                 }*/
+
+                File.Copy($"done-{yr.id}.mp3", $"G:/Мой диск/Yt/{DateTimeOffset.Now.ToUnixTimeSeconds()}.mp3");
 
                 File.Delete($"{yr.id}.mp3");
                 File.Delete($"done-{yr.id}.mp3");
@@ -1098,6 +1140,7 @@ namespace YTBotLoader
         [STAThread]
         static void Main()
         {
+
             //BotService bs = new BotService();
             BotService2 bs = new BotService2();
             Application.EnableVisualStyles();
