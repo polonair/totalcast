@@ -1,4 +1,6 @@
 /.vs/*
-/bin/*
-/obj/*
-/packages/*
+/tc2.test/bin/*
+/tc2.test/obj/*
+/tc2/bin/*
+/tc2/obj/*
+tc2/config.json
