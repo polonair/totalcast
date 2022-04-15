@@ -1,0 +1,54 @@
+{
+	"services": [
+		{
+			"class": "Logger",
+			"params": [
+				{
+					"key": "logFileName",
+					"value": "tc2.log"
+				}
+			]
+		},
+		{
+			"class": "Watcher",
+			"params": [
+				{
+					"key": "watchInterval",
+					"value": 30
+				}
+			]
+		},
+		{ "class": "YouTube" },
+		{
+			"class": "LocalDB",
+			"params": [
+				{
+					"key": "dbFileName",
+					"value": "data.db"
+				}
+			]
+		},
+		{ "class": "Networker" },
+		{ "class": "ConsoleUI" },
+		{ "class": "DebugService" },
+		{ "class": "FFMpegConverter" },
+		{ "class": "TagWriter" },
+		{
+			"class": "Telegram",
+			"params": [
+				{
+					"key": "botApiKey",
+					"value": "1567755350:Ufu1Q10HPTL0qkrAHcqvxeAEku4MggQAVr8"
+				},
+				{
+					"key": "chatId",
+					"value": "240502733"
+				},
+				{
+					"key": "longPollTimeout",
+					"value": "600"
+				}
+			]
+		}
+	]
+}
